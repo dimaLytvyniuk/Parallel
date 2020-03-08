@@ -13,12 +13,10 @@ using namespace std;
 
 const char* input_file_name = "../../in.txt";
 const char* output_file_name = "out.txt";
-const double EPSILON = 1E-8;
+const double EPSILON = 1E-16;
 
 const int X_TAG = 0;
-const int TERM_TAG = 1;
-const int VALUE_TAG = 2;
-const int END_TAG = 3;
+const int VALUE_TAG = 1;
 
 int world_rank;
 int numprocs;
@@ -65,56 +63,30 @@ int main(int argc, char* argv[]) {
 	}
 
 	double sum = .0;
-	int term_number = 0;
+	int term_number = world_rank + 1;
 	bool isEnd = false;
 
-	for (int step = 0; step < 1000; step++) {
-		term_number++;
-
-		if (world_rank == 0) {
-			for (int i = 1; i < numprocs; i++) {
-				MPI_Send(&term_number, 1, MPI_INT, i, TERM_TAG, MPI_COMM_WORLD);
-				term_number++;
-			}
-		}
-		else {
-			MPI_Recv(&term_number, 1, MPI_INT, 0, TERM_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		}
-
+	for (int step = 0; step < 1000000; step++) {
 		double currentValue = calculateElement(x, term_number);
+		sum += currentValue;
 
-		if (world_rank == 0) {
-			if (abs(currentValue) < EPSILON) {
-				isEnd = true;
-			}
-			sum += currentValue;
-
-			for (int i = 1; i < numprocs; i++) {
-				double taskResult;
-				MPI_Recv(&taskResult, 1, MPI_DOUBLE, i, VALUE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				sum += taskResult;
-				
-				if (abs(taskResult) < EPSILON) {
-					isEnd = true;
-				}
-			}
-		} 
-		else {
-			MPI_Send(&currentValue, 1, MPI_DOUBLE, 0, VALUE_TAG, MPI_COMM_WORLD);
-		}
-
-		if (world_rank == 0) {
-			for (int i = 1; i < numprocs; i++) {
-				MPI_Send(&isEnd, 1, MPI_INT, i, END_TAG, MPI_COMM_WORLD);
-			}
-		}
-		else {
-			MPI_Recv(&isEnd, 1, MPI_INT, 0, END_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		}
-
-		if (isEnd) {
+		if (abs(currentValue) < EPSILON) {
+			// cout << step << endl;
 			break;
 		}
+
+		term_number += numprocs;
+	}
+
+	if (world_rank == 0) {
+		for (int i = 1; i < numprocs; i++) {
+			double taskResult;
+			MPI_Recv(&taskResult, 1, MPI_DOUBLE, i, VALUE_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			sum += taskResult;
+		}
+	}
+	else {
+		MPI_Send(&sum, 1, MPI_DOUBLE, 0, VALUE_TAG, MPI_COMM_WORLD);
 	}
 
 	if (world_rank == 0) {

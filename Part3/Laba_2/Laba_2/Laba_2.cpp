@@ -28,8 +28,6 @@ double* getInput(const char* fileName) {
 	ifstream fin(fileName);
 	fin >> input[0] >> input[1] >> input[2];
 
-	//cout << input[2] << endl;
-
 	return input;
 }
 
@@ -127,7 +125,7 @@ int main(int argc, char* argv[]) {
 			res += results[i];
 		}
 
-		cout << "Result: " << res << endl;
+		//cout << "Result: " << res << endl;
 		writeResult(output_file_name, res);
 
 		delete[] recv_input_reqs;
